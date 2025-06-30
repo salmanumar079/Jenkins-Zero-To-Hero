@@ -16,7 +16,16 @@
       steps {
         sh 'ls -ltr'
         // build the project and create a JAR file
-        sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
+         sh '''
+      apt-get update && apt-get install -y wget gnupg software-properties-common
+      wget -O- https://apt.corretto.aws/corretto.key | gpg --dearmor > /etc/apt/trusted.gpg.d/corretto.gpg
+      add-apt-repository 'deb https://apt.corretto.aws stable main'
+      apt-get update && apt-get install -y java-17-amazon-corretto-jdk
+      export JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
+      export PATH=$JAVA_HOME/bin:$PATH
+      java -version
+      cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package
+    '''
       }
     }
     stage('Static Code Analysis') {
@@ -25,7 +34,12 @@
       }
       steps {
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
-          sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+          sh '''
+        export JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
+        export PATH=$JAVA_HOME/bin:$PATH
+        cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+        mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}
+      '''
         }
       }
     }
